@@ -49,10 +49,10 @@ module load gcc/15.2.0
 module load intel-ispc/latest
 ```
 
-2. The assignment starter code is available on <https://github.com/princeton-ece476/asst1>. Please clone the Assignment 1 starter code using:
+2. The assignment starter code is available on <https://github.com/princeton-ece476/assignment1>. Please clone the Assignment 1 starter code using:
 
 ```bash
-git clone https://github.com/princeton-ece476/asst1.git
+git clone https://github.com/princeton-ece476/assignment1.git
 ```
 
 3. The assignment has multiple parts. In order to run each part, you have been provided a Makefile within each directory. To build a program,
