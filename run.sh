@@ -44,7 +44,6 @@ echo "#SBATCH --cpus-per-task=$cores"   >> batch.sh
 echo "#SBATCH --job-name=$binary" >> batch.sh
 echo "#SBATCH --distribution=block:block" >> batch.sh
 echo "#SBATCH --constraint=skylake" >> batch.sh			# using the skylake CPUs
-echo "#SBATCH -p class" >> batch.sh				# using the class partition 
 
 cmd="./$dir/$kernel $kernel_opt 2> $out_file"
 

@@ -34,7 +34,6 @@ Because multiple users share the cluster, profiling data can be affected by "res
 
 1. Always request `--exclusive` access to a node for final benchmarking.
 2. Use the `--constraint=skylake` flag to ensure your code runs on the intended architecture.
-3. Use the `-p class` flag to ensure your code runs on the intended partition to give you the priority that courses do.
 
 ## Getting started ##
 
