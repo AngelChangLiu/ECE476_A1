@@ -214,6 +214,7 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
     }
     for (int i = 0; i < numThreads; i++) workers[i].join();
 
+    
     computeAssignments(&args);
     computeCentroids(&args);
     computeCost(&args);
