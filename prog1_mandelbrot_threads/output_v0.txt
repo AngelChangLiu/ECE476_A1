@@ -1,0 +1,2 @@
+[mandelbrot serial]:		[480.370] ms
+Wrote image file mandelbrot-serial.ppm

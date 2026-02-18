@@ -103,69 +103,48 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
     if (i + VECTOR_WIDTH > N) {
       width = N - i;
     }
-    // ex: if i = 8 and N = 10 -> maskAll = [1 1 0 0]
-    maskAll = _prog2_init_ones(width);
+    
+    maskAll = _prog2_init_ones(width); // mask for valid lanes
 
   // load data
   _prog2_vload_float(x, values + i, maskAll);
   _prog2_vload_int(y, exponents + i, maskAll);
 
-  // if (y == 0) output[i] = 1
-  // anything to the exponent of 0 is 1
-  _prog2_vset_float(result, 1.f, maskAll);
 
-  // find lanes where exponent == 0
+  _prog2_vset_float(result, 1.f, maskAll); // initialize result for all lanes to 1.f
+
+  // find lanes where exponent is 0
   _prog2_veq_int(maskYisZero, y, zeroInt, maskAll);
 
-  // mask for exponent != 0;
+  // mask for exponent which is not zero
   maskNotZero = _prog2_mask_not(maskYisZero);
   maskNotZero = _prog2_mask_and(maskNotZero, maskAll);
 
-  // for y != 0 lanes, result = x
+  // use mask to set result to x for lanes where exponent is not zero
   _prog2_vmove_float(result, x, maskNotZero);
 
-  // then subtract count by 1
-  // count = y - 1
+
+  // initialize count to y - 1 for lanes where exponent is not zero
   _prog2_vsub_int(count, y, oneInt, maskNotZero);
 
-  // while count > 0
-  // for exponents that are 2 or greater
-  // if exponent is 2, then the while loop runs once, and so on
+  // mask for active lanes where count > 0
   _prog2_vgt_int(maskActive, count, zeroInt, maskNotZero);
   while (_prog2_cntbits(maskActive) > 0) {
-    // result *= x
+    //multiply result by x if active
     _prog2_vmult_float(result, result, x, maskActive);
-    // count--
+    
+    // decrement count if active
     _prog2_vsub_int(count, count, oneInt, maskActive);
+
     // recompute maskActive 
     _prog2_vgt_int(maskActive, count, zeroInt, maskNotZero);
   }
 
-  // if (result > 9.999999f) {
-  //    result = 9.999999f;
-  //  }
-  _prog2_vgt_float(maskTooBig, result, maxVal, maskAll);
-  _prog2_vmove_float(result, maxVal, maskTooBig);
+  
+  _prog2_vgt_float(maskTooBig, result, maxVal, maskAll); // mask
+  _prog2_vmove_float(result, maxVal, maskTooBig); // clamp to maxVal 
 
-  _prog2_vstore_float(output + i, result, maskAll);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  _prog2_vstore_float(output + i, result, maskAll); // store results
   }
 
 
@@ -191,6 +170,28 @@ float arraySumVector(float* values, int N) {
   // here
   //
   // This is extra credit.
+  __prog2_vec_float sumVec = _prog2_vset_float(0.f);
+  __prog2_mask maskAll = _prog2_init_ones();
+  __prog2_vec_float temp;
+
+  // perform vectorized reduction 
+  for (int i = 0; i < N; i += VECTOR_WIDTH) {
+    _prog2_vload_float(temp, values + i, maskAll);
+    _prog2_vadd_float(sumVec, sumVec, temp, maskAll);
+  }
+
+  // perform horizontal add and interleave to reduce vector to a single sum
+  int width = VECTOR_WIDTH;
+  while (width > 1) {
+    _prog2_hadd_float(sumVec, sumVec);
+    _prog2_interleave_float(sumVec, sumVec);
+    width >>= 1; 
+  }
+
+  float resultBuffer[VECTOR_WIDTH]; // buffer to store the final result
+  __prog2_mask finalMask = _prog2_init_ones(1); // Store it in a variable first
+  _prog2_vstore_float(resultBuffer, sumVec, finalMask);
+  return resultBuffer[0];
 
   return 0.0;
 }

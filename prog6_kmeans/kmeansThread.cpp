@@ -11,7 +11,7 @@ using namespace std;
 typedef struct {
   // Control work assignments
   int start, end;
-
+  int startM, endM; // data point ranges
   // Shared by all functions
   double *data;
   double *clusterCentroids;
@@ -56,7 +56,8 @@ static bool stoppingConditionMet(double *prevCost, double *currCost,
 double dist(double *x, double *y, int nDim) {
   double accum = 0.0;
   for (int i = 0; i < nDim; i++) {
-    accum += pow((x[i] - y[i]), 2);
+    double diff = x[i] - y[i];
+    accum += diff * diff;
   }
   return sqrt(accum);
 }
@@ -65,27 +66,21 @@ double dist(double *x, double *y, int nDim) {
  * Assigns each data point to its "closest" cluster centroid.
  */
 void computeAssignments(WorkerArgs *const args) {
-  double *minDist = new double[args->M];
-  
-  // Initialize arrays
-  for (int m =0; m < args->M; m++) {
-    minDist[m] = 1e30;
-    args->clusterAssignments[m] = -1;
-  }
+  for (int m = args->startM; m < args->endM; m++) {
+    double minDist = 1e30;
+    int bestAssignment = -1;
 
-  // Assign datapoints to closest centroids
-  for (int k = args->start; k < args->end; k++) {
-    for (int m = 0; m < args->M; m++) {
+    // For each point, check all K centroids
+    for (int k = 0; k < args->K; k++) {
       double d = dist(&args->data[m * args->N],
                       &args->clusterCentroids[k * args->N], args->N);
-      if (d < minDist[m]) {
-        minDist[m] = d;
-        args->clusterAssignments[m] = k;
+      if (d < minDist) {
+        minDist = d;
+        bestAssignment = k;
       }
     }
+    args->clusterAssignments[m] = bestAssignment;
   }
-
-  delete[] minDist;
 }
 
 /**
@@ -206,6 +201,18 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
     // Setup args struct
     args.start = 0;
     args.end = K;
+
+    int numThreads = 32; 
+    std::thread workers[numThreads];
+    WorkerArgs threadArgs[numThreads];
+
+    for (int i = 0; i < numThreads; i++) {
+        threadArgs[i] = args; 
+        threadArgs[i].startM = i * (M / numThreads);
+        threadArgs[i].endM = (i == numThreads - 1) ? M : (i + 1) * (M / numThreads);
+        workers[i] = std::thread(computeAssignments, &threadArgs[i]);
+    }
+    for (int i = 0; i < numThreads; i++) workers[i].join();
 
     computeAssignments(&args);
     computeCentroids(&args);
