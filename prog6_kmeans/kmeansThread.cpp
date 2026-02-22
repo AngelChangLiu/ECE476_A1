@@ -204,22 +204,28 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
       prevCost[k] = currCost[k];
     }
 
-    // Setup args struct
+    // Setup args struct (0 to K)
     args.start = 0;
     args.end = K;
 
     double t0 = CycleTimer::currentSeconds(); // initial timer for computerAssignments loop
 
+    // number of threads to use for parallelizing
     int numThreads = 32; 
+    // array function
     std::thread workers[numThreads];
     WorkerArgs threadArgs[numThreads];
 
+    // compute for each thread
     for (int i = 0; i < numThreads; i++) {
         threadArgs[i] = args; 
+        // compute
         threadArgs[i].startM = i * (M / numThreads);
         threadArgs[i].endM = (i == numThreads - 1) ? M : (i + 1) * (M / numThreads);
         workers[i] = std::thread(computeAssignments, &threadArgs[i]);
     }
+
+    // wait until all threads finish
     for (int i = 0; i < numThreads; i++) workers[i].join();
 
     double t1 = CycleTimer::currentSeconds(); // end timer for computerAssignments loop
