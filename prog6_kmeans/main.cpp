@@ -89,7 +89,7 @@ int main() {
 
   // NOTE: we will grade your submission using the data in data.dat
   // which is read by this function
-  readData("./prog6_kmeans/data.dat", &data, &clusterCentroids, &clusterAssignments, &M, &N,
+  readData("data.dat", &data, &clusterCentroids, &clusterAssignments, &M, &N,
            &K, &epsilon);
 
   // NOTE: if you want to generate your own data (for fun), you can use the

@@ -18,6 +18,10 @@ typedef struct {
   int *clusterAssignments;
   double *currCost;
   int M, N, K;
+
+  double *workerCost; // the cost for each individual thread, later will be added together
+
+
 } WorkerArgs;
 
 
@@ -56,8 +60,7 @@ static bool stoppingConditionMet(double *prevCost, double *currCost,
 double dist(double *x, double *y, int nDim) {
   double accum = 0.0;
   for (int i = 0; i < nDim; i++) {
-    double diff = x[i] - y[i];
-    accum += diff * diff;
+    accum += pow((x[i] - y[i]), 2);
   }
   return sqrt(accum);
 }
@@ -123,6 +126,7 @@ void computeCentroids(WorkerArgs *const args) {
 /**
  * Computes the per-cluster cost. Used to check if the algorithm has converged.
  */
+
 void computeCost(WorkerArgs *const args) {
   double *accum = new double[args->K];
 
@@ -145,6 +149,8 @@ void computeCost(WorkerArgs *const args) {
 
   delete[] accum;
 }
+
+
 
 /**
  * Computes the K-Means algorithm, using std::thread to parallelize the work.
@@ -202,6 +208,8 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
     args.start = 0;
     args.end = K;
 
+    double t0 = CycleTimer::currentSeconds(); // initial timer for computerAssignments loop
+
     int numThreads = 32; 
     std::thread workers[numThreads];
     WorkerArgs threadArgs[numThreads];
@@ -214,10 +222,23 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
     }
     for (int i = 0; i < numThreads; i++) workers[i].join();
 
-    
+    double t1 = CycleTimer::currentSeconds(); // end timer for computerAssignments loop
+    printf("computeAssignmentsloop: %.3f ms\n", (t1 - t0) * 1000);
+
+    double t6 = CycleTimer::currentSeconds(); // initial timer for computeAssignments no loop
     computeAssignments(&args);
+    double t7 = CycleTimer::currentSeconds(); // end timer for computeAssignments no loop
+    printf("computeAssignmentsnoloop: %.3f ms\n", (t7 - t6) * 1000);
+
+    double t2 = CycleTimer::currentSeconds(); // initial timer for computeCentroids
     computeCentroids(&args);
+    double t3 = CycleTimer::currentSeconds(); // end timer for computeCentroids
+    printf("computeCentroids: %.3f ms\n", (t3 - t2) * 1000);
+
+    double t4 = CycleTimer::currentSeconds(); // initial timer for computeCost
     computeCost(&args);
+    double t5 = CycleTimer::currentSeconds(); // end timer for computeCost
+    printf("computeCost: %.3f ms\n", (t5 - t4) * 1000);
 
     iter++;
   }
@@ -225,3 +246,5 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
   delete[] currCost;
   delete[] prevCost;
 }
+
+
